@@ -1,0 +1,2198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="FileSpace — Universal File Viewer and Workspace">
+<title>FileSpace — Universal File Workspace</title>
+
+<!-- PDF.js -->
+<script type="module">
+import * as pdfjsLib from
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+
+window.pdfjsLib = pdfjsLib;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+</script>
+
+<!-- DOCX -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.8.0/mammoth.browser.min.js"></script>
+
+<!-- Excel / CSV -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+:root{
+  --bg:#f5f7fb;
+  --panel:#ffffff;
+  --text:#202124;
+  --muted:#6b7280;
+  --border:#e2e6ed;
+  --primary:#2563eb;
+  --primary2:#1d4ed8;
+  --hover:#edf3ff;
+  --shadow:0 10px 35px rgba(0,0,0,.08);
+}
+
+body.dark{
+  --bg:#101318;
+  --panel:#191d24;
+  --text:#f5f7fb;
+  --muted:#9ca3af;
+  --border:#303641;
+  --primary:#5d8dff;
+  --primary2:#4778e8;
+  --hover:#242b39;
+  --shadow:0 10px 35px rgba(0,0,0,.35);
+}
+
+body{
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+
+  background:var(--bg);
+  color:var(--text);
+
+  height:100vh;
+  overflow:hidden;
+}
+
+/* ================================
+   HEADER
+================================ */
+
+header{
+  height:64px;
+  background:var(--panel);
+  border-bottom:1px solid var(--border);
+
+  display:flex;
+  align-items:center;
+
+  padding:0 18px;
+  gap:18px;
+
+  position:relative;
+  z-index:20;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  font-size:20px;
+  font-weight:800;
+  white-space:nowrap;
+}
+
+.logoIcon{
+  width:35px;
+  height:35px;
+
+  border-radius:10px;
+
+  display:grid;
+  place-items:center;
+
+  color:white;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #7c3aed
+    );
+}
+
+.search{
+  flex:1;
+  max-width:650px;
+  position:relative;
+}
+
+.search input{
+  width:100%;
+  height:42px;
+
+  border:1px solid var(--border);
+  border-radius:22px;
+
+  background:var(--bg);
+  color:var(--text);
+
+  padding:0 18px 0 43px;
+
+  outline:none;
+  font-size:14px;
+}
+
+.search input:focus{
+  border-color:var(--primary);
+}
+
+.searchIcon{
+  position:absolute;
+  left:16px;
+  top:10px;
+  color:var(--muted);
+}
+
+.headerActions{
+  margin-left:auto;
+
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.iconBtn{
+  width:40px;
+  height:40px;
+
+  border:0;
+  border-radius:50%;
+
+  display:grid;
+  place-items:center;
+
+  background:transparent;
+  color:var(--text);
+
+  cursor:pointer;
+  font-size:18px;
+}
+
+.iconBtn:hover{
+  background:var(--hover);
+}
+
+.primary{
+  border:0;
+  background:var(--primary);
+  color:white;
+
+  padding:11px 17px;
+
+  border-radius:9px;
+
+  font-weight:650;
+  cursor:pointer;
+}
+
+.primary:hover{
+  background:var(--primary2);
+}
+
+/* ================================
+   APP LAYOUT
+================================ */
+
+.app{
+  height:calc(100vh - 64px);
+  display:flex;
+}
+
+/* ================================
+   SIDEBAR
+================================ */
+
+.sidebar{
+  width:245px;
+
+  background:var(--panel);
+  border-right:1px solid var(--border);
+
+  padding:18px 12px;
+
+  overflow:auto;
+
+  position:relative;
+}
+
+.nav{
+  display:flex;
+  align-items:center;
+
+  gap:12px;
+
+  padding:11px 13px;
+
+  border-radius:9px;
+
+  margin:2px 0;
+
+  font-size:14px;
+
+  cursor:pointer;
+}
+
+.nav:hover,
+.nav.active{
+  background:var(--hover);
+  color:var(--primary);
+}
+
+.navTitle{
+  font-size:11px;
+
+  color:var(--muted);
+
+  font-weight:700;
+
+  padding:
+    16px 12px 7px;
+
+  text-transform:uppercase;
+
+  letter-spacing:.08em;
+}
+
+.storage{
+  margin:20px 10px;
+
+  padding:15px;
+
+  border:1px solid var(--border);
+
+  border-radius:12px;
+}
+
+.storageTop{
+  display:flex;
+  justify-content:space-between;
+
+  font-size:12px;
+
+  margin-bottom:9px;
+}
+
+.progress{
+  height:7px;
+
+  background:var(--border);
+
+  border-radius:20px;
+
+  overflow:hidden;
+}
+
+.progress div{
+  height:100%;
+  width:35%;
+
+  background:var(--primary);
+}
+
+.creator{
+  position:absolute;
+
+  bottom:15px;
+  left:0;
+  right:0;
+
+  text-align:center;
+
+  font-size:10px;
+
+  letter-spacing:.12em;
+
+  color:var(--muted);
+
+  opacity:.7;
+}
+
+/* ================================
+   MAIN
+================================ */
+
+main{
+  flex:1;
+
+  overflow:auto;
+
+  position:relative;
+}
+
+.home{
+  padding:30px;
+
+  max-width:1450px;
+
+  margin:auto;
+}
+
+.welcome{
+  display:flex;
+
+  justify-content:space-between;
+  align-items:center;
+
+  margin-bottom:25px;
+}
+
+.welcome h1{
+  font-size:28px;
+}
+
+.welcome p{
+  color:var(--muted);
+
+  margin-top:5px;
+}
+
+.dropzone{
+  border:2px dashed var(--border);
+
+  background:var(--panel);
+
+  border-radius:18px;
+
+  min-height:215px;
+
+  display:flex;
+  flex-direction:column;
+
+  align-items:center;
+  justify-content:center;
+
+  text-align:center;
+
+  transition:.2s;
+
+  margin-bottom:30px;
+}
+
+.dropzone.drag{
+  border-color:var(--primary);
+  background:var(--hover);
+}
+
+.dropIcon{
+  font-size:48px;
+
+  margin-bottom:10px;
+}
+
+.dropzone h2{
+  font-size:20px;
+}
+
+.dropzone p{
+  color:var(--muted);
+
+  margin:7px 0 17px;
+
+  font-size:14px;
+}
+
+.sectionHead{
+  margin-bottom:13px;
+}
+
+.sectionHead h2{
+  font-size:18px;
+}
+
+.fileGrid{
+  display:grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fill,
+      minmax(220px,1fr)
+    );
+
+  gap:15px;
+}
+
+.fileCard{
+  background:var(--panel);
+
+  border:1px solid var(--border);
+
+  border-radius:14px;
+
+  padding:17px;
+
+  cursor:pointer;
+
+  transition:.18s;
+
+  min-height:145px;
+}
+
+.fileCard:hover{
+  transform:translateY(-2px);
+
+  box-shadow:var(--shadow);
+
+  border-color:var(--primary);
+}
+
+.fileIcon{
+  width:48px;
+  height:48px;
+
+  border-radius:11px;
+
+  display:grid;
+  place-items:center;
+
+  background:var(--hover);
+
+  font-size:24px;
+
+  margin-bottom:13px;
+}
+
+.fileName{
+  font-weight:650;
+
+  white-space:nowrap;
+
+  overflow:hidden;
+
+  text-overflow:ellipsis;
+}
+
+.fileMeta{
+  color:var(--muted);
+
+  font-size:12px;
+
+  margin-top:5px;
+}
+
+/* ================================
+   VIEWER
+================================ */
+
+.viewer{
+  position:absolute;
+
+  inset:0;
+
+  background:var(--bg);
+
+  display:none;
+
+  flex-direction:column;
+
+  z-index:10;
+}
+
+.viewer.show{
+  display:flex;
+}
+
+.viewerBar{
+  height:60px;
+
+  flex-shrink:0;
+
+  background:var(--panel);
+
+  border-bottom:1px solid var(--border);
+
+  display:flex;
+
+  align-items:center;
+
+  gap:8px;
+
+  padding:0 15px;
+}
+
+.viewerTitle{
+  flex:1;
+
+  font-weight:650;
+
+  overflow:hidden;
+
+  white-space:nowrap;
+
+  text-overflow:ellipsis;
+}
+
+.toolBtn{
+  min-width:38px;
+
+  height:38px;
+
+  border:0;
+
+  border-radius:8px;
+
+  padding:0 10px;
+
+  background:transparent;
+
+  color:var(--text);
+
+  cursor:pointer;
+}
+
+.toolBtn:hover{
+  background:var(--hover);
+}
+
+.viewerBody{
+  flex:1;
+
+  overflow:auto;
+
+  display:flex;
+
+  justify-content:center;
+
+  padding:25px;
+}
+
+#pdfContainer{
+  display:flex;
+
+  flex-direction:column;
+
+  align-items:center;
+
+  gap:20px;
+}
+
+.pdfPage{
+  background:white;
+
+  box-shadow:
+    0 3px 20px
+    rgba(0,0,0,.18);
+}
+
+#docContent{
+  background:white;
+
+  color:#111;
+
+  width:min(900px,95%);
+
+  min-height:100%;
+
+  padding:50px;
+
+  box-shadow:var(--shadow);
+
+  line-height:1.6;
+}
+
+#docContent img{
+  max-width:100%;
+}
+
+#imageViewer{
+  max-width:95%;
+  max-height:95%;
+
+  object-fit:contain;
+
+  box-shadow:var(--shadow);
+}
+
+#videoViewer{
+  max-width:95%;
+  max-height:90%;
+}
+
+#audioViewer{
+  width:min(600px,90%);
+}
+
+#textViewer{
+  display:none;
+
+  white-space:pre-wrap;
+
+  width:min(1000px,95%);
+
+  background:var(--panel);
+
+  padding:30px;
+
+  border-radius:12px;
+
+  font-family:monospace;
+
+  line-height:1.6;
+
+  box-shadow:var(--shadow);
+}
+
+.sheetWrap{
+  max-width:100%;
+
+  overflow:auto;
+
+  box-shadow:var(--shadow);
+}
+
+table{
+  border-collapse:collapse;
+
+  background:white;
+
+  color:#111;
+
+  min-width:600px;
+}
+
+td,th{
+  border:1px solid #ccc;
+
+  padding:8px 12px;
+
+  text-align:left;
+}
+
+th{
+  background:#eef0f3;
+}
+
+/* ================================
+   TOAST
+================================ */
+
+.toast{
+  position:fixed;
+
+  bottom:25px;
+  right:25px;
+
+  background:#202124;
+
+  color:white;
+
+  padding:13px 18px;
+
+  border-radius:10px;
+
+  transform:translateY(100px);
+
+  opacity:0;
+
+  transition:.25s;
+
+  z-index:100;
+}
+
+.toast.show{
+  transform:translateY(0);
+  opacity:1;
+}
+
+/* ================================
+   MOBILE
+================================ */
+
+@media(max-width:800px){
+
+  .sidebar{
+    width:65px;
+    padding:12px 8px;
+  }
+
+  .nav{
+    justify-content:center;
+    font-size:0;
+  }
+
+  .navTitle,
+  .storage,
+  .creator{
+    display:none;
+  }
+
+  .logoText{
+    display:none;
+  }
+
+  .home{
+    padding:18px;
+  }
+
+  .welcome h1{
+    font-size:22px;
+  }
+
+  .primary{
+    padding:10px 12px;
+  }
+
+  .fileGrid{
+    grid-template-columns:
+      repeat(2,1fr);
+  }
+
+  .viewerBody{
+    padding:10px;
+  }
+
+  #docContent{
+    padding:25px;
+  }
+}
+
+@media(max-width:500px){
+
+  .search{
+    display:none;
+  }
+
+  .fileGrid{
+    grid-template-columns:1fr;
+  }
+
+  .welcome{
+    gap:15px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ================================
+     HEADER
+================================ -->
+
+<header>
+
+  <div class="logo">
+
+    <div class="logoIcon">
+      ▣
+    </div>
+
+    <span class="logoText">
+      FileSpace
+    </span>
+
+  </div>
+
+  <div class="search">
+
+    <span class="searchIcon">
+      🔍
+    </span>
+
+    <input
+      id="searchInput"
+      placeholder="Search files..."
+    >
+
+  </div>
+
+  <div class="headerActions">
+
+    <button
+      class="iconBtn"
+      id="themeBtn"
+      title="Dark mode">
+      ☾
+    </button>
+
+    <button
+      class="iconBtn"
+      onclick="openPicker()"
+      title="Open file">
+      ＋
+    </button>
+
+  </div>
+
+</header>
+
+
+<!-- ================================
+     APPLICATION
+================================ -->
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+
+  <aside class="sidebar">
+
+    <div
+      class="nav active"
+      onclick="showHome()">
+
+      <span>⌂</span>
+      <span>Home</span>
+
+    </div>
+
+    <div
+      class="nav"
+      onclick="openPicker()">
+
+      <span>📂</span>
+      <span>Open files</span>
+
+    </div>
+
+    <div class="nav">
+      <span>⭐</span>
+      <span>Favorites</span>
+    </div>
+
+    <div class="nav">
+      <span>🕘</span>
+      <span>Recent</span>
+    </div>
+
+
+    <div class="navTitle">
+      Tools
+    </div>
+
+    <div
+      class="nav"
+      onclick="toast('Open a PDF to use PDF tools.')">
+
+      <span>📕</span>
+      <span>PDF tools</span>
+
+    </div>
+
+    <div
+      class="nav"
+      onclick="toast('Open a supported document.')">
+
+      <span>📝</span>
+      <span>Documents</span>
+
+    </div>
+
+    <div
+      class="nav"
+      onclick="toast('Spreadsheet preview is supported.')">
+
+      <span>📊</span>
+      <span>Spreadsheets</span>
+
+    </div>
+
+    <div
+      class="nav"
+      onclick="toast('Presentation preview depends on file support.')">
+
+      <span>📽️</span>
+      <span>Presentations</span>
+
+    </div>
+
+
+    <div class="storage">
+
+      <div class="storageTop">
+
+        <span>
+          Browser storage
+        </span>
+
+        <span>
+          Local
+        </span>
+
+      </div>
+
+      <div class="progress">
+        <div></div>
+      </div>
+
+      <small
+        style="
+        color:var(--muted);
+        display:block;
+        margin-top:8px">
+
+        Files are processed locally
+        where possible.
+
+      </small>
+
+    </div>
+
+
+    <!-- CREATOR MARK -->
+
+    <div class="creator">
+      CREATED BY CHARAN
+    </div>
+
+  </aside>
+
+
+  <!-- MAIN -->
+
+  <main>
+
+    <section
+      class="home"
+      id="home">
+
+      <div class="welcome">
+
+        <div>
+
+          <h1>
+            Your files, one place.
+          </h1>
+
+          <p>
+            Open documents, PDFs, images,
+            spreadsheets and more.
+          </p>
+
+        </div>
+
+        <button
+          class="primary"
+          onclick="openPicker()">
+
+          ＋ Open File
+
+        </button>
+
+      </div>
+
+
+      <!-- DROP AREA -->
+
+      <div
+        class="dropzone"
+        id="dropzone">
+
+        <div class="dropIcon">
+          ☁️
+        </div>
+
+        <h2>
+          Drop your files here
+        </h2>
+
+        <p>
+          PDF · DOCX · XLSX · CSV · PPTX ·
+          TXT · Images · Audio · Video
+        </p>
+
+        <button
+          class="primary"
+          onclick="openPicker()">
+
+          Browse files
+
+        </button>
+
+      </div>
+
+
+      <!-- SUPPORTED FORMATS -->
+
+      <div class="sectionHead">
+
+        <h2>
+          Supported formats
+        </h2>
+
+      </div>
+
+
+      <div class="fileGrid">
+
+        <div
+          class="fileCard"
+          onclick="toast('Choose a PDF from your device.')">
+
+          <div class="fileIcon">
+            📕
+          </div>
+
+          <div class="fileName">
+            PDF Documents
+          </div>
+
+          <div class="fileMeta">
+            View · Zoom · Print · Download
+          </div>
+
+        </div>
+
+
+        <div
+          class="fileCard"
+          onclick="toast('Choose a DOCX file from your device.')">
+
+          <div class="fileIcon">
+            📝
+          </div>
+
+          <div class="fileName">
+            Word Documents
+          </div>
+
+          <div class="fileMeta">
+            DOCX preview
+          </div>
+
+        </div>
+
+
+        <div
+          class="fileCard"
+          onclick="toast('Choose an XLSX or CSV file.')">
+
+          <div class="fileIcon">
+            📊
+          </div>
+
+          <div class="fileName">
+            Spreadsheets
+          </div>
+
+          <div class="fileMeta">
+            XLSX · XLS · CSV
+          </div>
+
+        </div>
+
+
+        <div
+          class="fileCard"
+          onclick="toast('Choose an image file.')">
+
+          <div class="fileIcon">
+            🖼️
+          </div>
+
+          <div class="fileName">
+            Images
+          </div>
+
+          <div class="fileMeta">
+            PNG · JPG · WEBP · GIF · SVG
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================================
+         FILE VIEWER
+    ================================= -->
+
+    <section
+      class="viewer"
+      id="viewer">
+
+      <div class="viewerBar">
+
+        <button
+          class="toolBtn"
+          onclick="closeViewer()">
+
+          ← Back
+
+        </button>
+
+        <div
+          class="viewerTitle"
+          id="viewerTitle">
+
+          File
+
+        </div>
+
+        <button
+          class="toolBtn"
+          onclick="zoomOut()">
+
+          −
+
+        </button>
+
+        <button
+          class="toolBtn"
+          onclick="resetZoom()">
+
+          100%
+
+        </button>
+
+        <button
+          class="toolBtn"
+          onclick="zoomIn()">
+
+          ＋
+
+        </button>
+
+        <button
+          class="toolBtn"
+          onclick="printFile()">
+
+          🖨
+
+        </button>
+
+        <button
+          class="toolBtn"
+          id="downloadBtn">
+
+          ⬇
+
+        </button>
+
+      </div>
+
+
+      <div class="viewerBody">
+
+        <div
+          id="pdfContainer">
+        </div>
+
+
+        <div
+          id="docContent">
+        </div>
+
+
+        <img
+          id="imageViewer">
+
+
+        <video
+          id="videoViewer"
+          controls>
+        </video>
+
+
+        <audio
+          id="audioViewer"
+          controls>
+        </audio>
+
+
+        <div
+          id="textViewer">
+        </div>
+
+
+        <div
+          id="sheetViewer"
+          class="sheetWrap">
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+</div>
+
+
+<!-- FILE INPUT -->
+
+<input
+  id="fileInput"
+  type="file"
+  multiple
+  hidden
+  accept="
+  .pdf,
+  .docx,
+  .xlsx,
+  .xls,
+  .csv,
+  .txt,
+  .md,
+  .json,
+  .html,
+  .htm,
+  .xml,
+  .css,
+  .js,
+  .jpg,
+  .jpeg,
+  .png,
+  .webp,
+  .gif,
+  .svg,
+  .mp4,
+  .webm,
+  .ogg,
+  .mp3,
+  .wav
+  ">
+
+
+<!-- TOAST -->
+
+<div
+  class="toast"
+  id="toast">
+</div>
+
+
+<script>
+
+/* =========================================
+   GLOBAL VARIABLES
+========================================= */
+
+let currentFile = null;
+let currentObjectURL = null;
+let currentScale = 1;
+
+
+/* =========================================
+   ELEMENTS
+========================================= */
+
+const fileInput =
+  document.getElementById("fileInput");
+
+const dropzone =
+  document.getElementById("dropzone");
+
+const viewer =
+  document.getElementById("viewer");
+
+const home =
+  document.getElementById("home");
+
+const viewerTitle =
+  document.getElementById("viewerTitle");
+
+const pdfContainer =
+  document.getElementById("pdfContainer");
+
+const docContent =
+  document.getElementById("docContent");
+
+const imageViewer =
+  document.getElementById("imageViewer");
+
+const videoViewer =
+  document.getElementById("videoViewer");
+
+const audioViewer =
+  document.getElementById("audioViewer");
+
+const textViewer =
+  document.getElementById("textViewer");
+
+const sheetViewer =
+  document.getElementById("sheetViewer");
+
+const downloadBtn =
+  document.getElementById("downloadBtn");
+
+
+/* =========================================
+   FILE PICKER
+========================================= */
+
+function openPicker(){
+
+  fileInput.click();
+
+}
+
+fileInput.addEventListener(
+  "change",
+  event=>{
+
+    const files =
+      [...event.target.files];
+
+    files.forEach(openFile);
+
+  }
+);
+
+
+/* =========================================
+   DRAG AND DROP
+========================================= */
+
+["dragenter","dragover"].forEach(
+  eventName=>{
+
+    dropzone.addEventListener(
+      eventName,
+      event=>{
+
+        event.preventDefault();
+
+        dropzone.classList.add("drag");
+
+      }
+    );
+
+  }
+);
+
+
+["dragleave","drop"].forEach(
+  eventName=>{
+
+    dropzone.addEventListener(
+      eventName,
+      event=>{
+
+        event.preventDefault();
+
+        dropzone.classList.remove("drag");
+
+      }
+    );
+
+  }
+);
+
+
+dropzone.addEventListener(
+  "drop",
+  event=>{
+
+    const files =
+      [...event.dataTransfer.files];
+
+    files.forEach(openFile);
+
+  }
+);
+
+
+/* =========================================
+   OPEN FILE
+========================================= */
+
+async function openFile(file){
+
+  if(!file) return;
+
+  currentFile = file;
+
+  home.style.display = "none";
+
+  viewer.classList.add("show");
+
+  viewerTitle.textContent =
+    file.name;
+
+  clearViewer();
+
+  downloadBtn.onclick =
+    downloadCurrentFile;
+
+
+  const extension =
+    file.name
+    .split(".")
+    .pop()
+    .toLowerCase();
+
+
+  try{
+
+    if(extension === "pdf"){
+
+      await openPDF(file);
+
+    }
+
+    else if(extension === "docx"){
+
+      await openDOCX(file);
+
+    }
+
+    else if(
+      ["xlsx","xls","csv"]
+      .includes(extension)
+    ){
+
+      await openSpreadsheet(file);
+
+    }
+
+    else if(
+      [
+        "jpg",
+        "jpeg",
+        "png",
+        "webp",
+        "gif",
+        "svg"
+      ].includes(extension)
+    ){
+
+      openImage(file);
+
+    }
+
+    else if(
+      [
+        "mp4",
+        "webm",
+        "ogg"
+      ].includes(extension)
+    ){
+
+      openVideo(file);
+
+    }
+
+    else if(
+      [
+        "mp3",
+        "wav",
+        "ogg"
+      ].includes(extension)
+    ){
+
+      openAudio(file);
+
+    }
+
+    else if(
+      [
+        "txt",
+        "md",
+        "json",
+        "html",
+        "htm",
+        "xml",
+        "css",
+        "js"
+      ].includes(extension)
+    ){
+
+      await openText(file);
+
+    }
+
+    else{
+
+      toast(
+        "This file type is not supported yet."
+      );
+
+    }
+
+  }
+
+  catch(error){
+
+    console.error(error);
+
+    toast(
+      "Couldn't open this file."
+    );
+
+  }
+
+}
+
+
+/* =========================================
+   CLEAR VIEWER
+========================================= */
+
+function clearViewer(){
+
+  pdfContainer.innerHTML = "";
+
+  sheetViewer.innerHTML = "";
+
+  docContent.innerHTML = "";
+
+  textViewer.textContent = "";
+
+  imageViewer.src = "";
+
+  videoViewer.src = "";
+
+  audioViewer.src = "";
+
+
+  [
+    pdfContainer,
+    docContent,
+    imageViewer,
+    videoViewer,
+    audioViewer,
+    textViewer,
+    sheetViewer
+  ].forEach(
+    element=>{
+      element.style.display = "none";
+    }
+  );
+
+
+  currentScale = 1;
+
+}
+
+
+/* =========================================
+   PDF VIEWER
+========================================= */
+
+async function openPDF(file){
+
+  pdfContainer.style.display =
+    "flex";
+
+  const buffer =
+    await file.arrayBuffer();
+
+  const pdf =
+    await window.pdfjsLib
+      .getDocument({
+        data:buffer
+      })
+      .promise;
+
+
+  for(
+    let pageNumber=1;
+    pageNumber<=pdf.numPages;
+    pageNumber++
+  ){
+
+    const page =
+      await pdf.getPage(
+        pageNumber
+      );
+
+
+    const viewport =
+      page.getViewport({
+        scale:currentScale
+      });
+
+
+    const canvas =
+      document.createElement(
+        "canvas"
+      );
+
+
+    canvas.className =
+      "pdfPage";
+
+
+    canvas.width =
+      viewport.width;
+
+    canvas.height =
+      viewport.height;
+
+
+    const context =
+      canvas.getContext("2d");
+
+
+    await page.render({
+
+      canvasContext:context,
+
+      viewport:viewport
+
+    }).promise;
+
+
+    pdfContainer.appendChild(
+      canvas
+    );
+
+  }
+
+
+  toast(
+    `${pdf.numPages} page${
+      pdf.numPages === 1
+      ? ""
+      : "s"
+    } loaded`
+  );
+
+}
+
+
+/* =========================================
+   DOCX
+========================================= */
+
+async function openDOCX(file){
+
+  docContent.style.display =
+    "block";
+
+  const buffer =
+    await file.arrayBuffer();
+
+
+  const result =
+    await mammoth.convertToHtml({
+      arrayBuffer:buffer
+    });
+
+
+  docContent.innerHTML =
+    result.value;
+
+}
+
+
+/* =========================================
+   SPREADSHEETS
+========================================= */
+
+async function openSpreadsheet(file){
+
+  sheetViewer.style.display =
+    "block";
+
+
+  const buffer =
+    await file.arrayBuffer();
+
+
+  const workbook =
+    XLSX.read(
+      buffer,
+      {
+        type:"array"
+      }
+    );
+
+
+  let output = "";
+
+
+  workbook.SheetNames.forEach(
+    sheetName=>{
+
+      const sheet =
+        workbook.Sheets[
+          sheetName
+        ];
+
+
+      output += `
+
+        <h2 style="
+          margin:20px 0 10px;
+          color:var(--text)">
+
+          ${escapeHTML(
+            sheetName
+          )}
+
+        </h2>
+
+      `;
+
+
+      output +=
+        XLSX.utils
+          .sheet_to_html(
+            sheet
+          );
+
+    }
+  );
+
+
+  sheetViewer.innerHTML =
+    output;
+
+}
+
+
+/* =========================================
+   IMAGE
+========================================= */
+
+function openImage(file){
+
+  imageViewer.style.display =
+    "block";
+
+
+  currentObjectURL =
+    URL.createObjectURL(
+      file
+    );
+
+
+  imageViewer.src =
+    currentObjectURL;
+
+}
+
+
+/* =========================================
+   VIDEO
+========================================= */
+
+function openVideo(file){
+
+  videoViewer.style.display =
+    "block";
+
+
+  currentObjectURL =
+    URL.createObjectURL(
+      file
+    );
+
+
+  videoViewer.src =
+    currentObjectURL;
+
+}
+
+
+/* =========================================
+   AUDIO
+========================================= */
+
+function openAudio(file){
+
+  audioViewer.style.display =
+    "block";
+
+
+  currentObjectURL =
+    URL.createObjectURL(
+      file
+    );
+
+
+  audioViewer.src =
+    currentObjectURL;
+
+}
+
+
+/* =========================================
+   TEXT
+========================================= */
+
+async function openText(file){
+
+  textViewer.style.display =
+    "block";
+
+
+  const text =
+    await file.text();
+
+
+  textViewer.textContent =
+    text;
+
+}
+
+
+/* =========================================
+   DOWNLOAD
+========================================= */
+
+function downloadCurrentFile(){
+
+  if(!currentFile) return;
+
+
+  const url =
+    currentObjectURL ||
+    URL.createObjectURL(
+      currentFile
+    );
+
+
+  const link =
+    document.createElement("a");
+
+
+  link.href = url;
+
+  link.download =
+    currentFile.name;
+
+
+  document.body.appendChild(
+    link
+  );
+
+  link.click();
+
+  link.remove();
+
+}
+
+
+/* =========================================
+   CLOSE VIEWER
+========================================= */
+
+function closeViewer(){
+
+  viewer.classList.remove(
+    "show"
+  );
+
+  home.style.display =
+    "block";
+
+
+  if(currentObjectURL){
+
+    URL.revokeObjectURL(
+      currentObjectURL
+    );
+
+    currentObjectURL = null;
+
+  }
+
+
+  clearViewer();
+
+}
+
+
+function showHome(){
+
+  closeViewer();
+
+}
+
+
+/* =========================================
+   PDF ZOOM
+========================================= */
+
+async function reloadPDF(){
+
+  if(
+    currentFile &&
+    currentFile.name
+      .toLowerCase()
+      .endsWith(".pdf")
+  ){
+
+    await openPDF(
+      currentFile
+    );
+
+  }
+
+}
+
+
+function zoomIn(){
+
+  currentScale += .2;
+
+  reloadPDF();
+
+}
+
+
+function zoomOut(){
+
+  currentScale =
+    Math.max(
+      .4,
+      currentScale - .2
+    );
+
+  reloadPDF();
+
+}
+
+
+function resetZoom(){
+
+  currentScale = 1;
+
+  reloadPDF();
+
+}
+
+
+/* =========================================
+   PRINT
+========================================= */
+
+function printFile(){
+
+  if(!currentFile) return;
+
+
+  const url =
+    URL.createObjectURL(
+      currentFile
+    );
+
+
+  const popup =
+    window.open(
+      url,
+      "_blank"
+    );
+
+
+  if(popup){
+
+    popup.onload = ()=>{
+      popup.print();
+    };
+
+  }
+
+}
+
+
+/* =========================================
+   SEARCH
+========================================= */
+
+document
+  .getElementById(
+    "searchInput"
+  )
+  .addEventListener(
+    "input",
+    function(){
+
+      const query =
+        this.value
+          .toLowerCase();
+
+
+      document
+        .querySelectorAll(
+          ".fileCard"
+        )
+        .forEach(card=>{
+
+          card.style.display =
+            card.textContent
+              .toLowerCase()
+              .includes(query)
+              ? ""
+              : "none";
+
+        });
+
+    }
+  );
+
+
+/* =========================================
+   DARK MODE
+========================================= */
+
+const themeButton =
+  document.getElementById(
+    "themeBtn"
+  );
+
+
+themeButton.addEventListener(
+  "click",
+  ()=>{
+
+    document.body
+      .classList
+      .toggle("dark");
+
+
+    const dark =
+      document.body
+        .classList
+        .contains("dark");
+
+
+    localStorage.setItem(
+      "filespace-dark",
+      dark
+    );
+
+
+    themeButton.textContent =
+      dark
+      ? "☀"
+      : "☾";
+
+  }
+);
+
+
+if(
+  localStorage.getItem(
+    "filespace-dark"
+  ) === "true"
+){
+
+  document.body
+    .classList
+    .add("dark");
+
+
+  themeButton.textContent =
+    "☀";
+
+}
+
+
+/* =========================================
+   TOAST
+========================================= */
+
+function toast(message){
+
+  const element =
+    document.getElementById(
+      "toast"
+    );
+
+
+  element.textContent =
+    message;
+
+
+  element.classList.add(
+    "show"
+  );
+
+
+  clearTimeout(
+    window.toastTimer
+  );
+
+
+  window.toastTimer =
+    setTimeout(
+      ()=>{
+        element.classList.remove(
+          "show"
+        );
+      },
+      2500
+    );
+
+}
+
+
+/* =========================================
+   HTML ESCAPE
+========================================= */
+
+function escapeHTML(value){
+
+  return String(value)
+
+    .replaceAll(
+      "&",
+      "&amp;"
+    )
+
+    .replaceAll(
+      "<",
+      "&lt;"
+    )
+
+    .replaceAll(
+      ">",
+      "&gt;"
+    )
+
+    .replaceAll(
+      '"',
+      "&quot;"
+    )
+
+    .replaceAll(
+      "'",
+      "&#039;"
+    );
+
+}
+
+
+/* =========================================
+   KEYBOARD SHORTCUTS
+========================================= */
+
+document.addEventListener(
+  "keydown",
+  event=>{
+
+    if(
+      (event.ctrlKey ||
+       event.metaKey) &&
+      event.key.toLowerCase()
+        === "o"
+    ){
+
+      event.preventDefault();
+
+      openPicker();
+
+    }
+
+
+    if(
+      event.key === "Escape" &&
+      viewer.classList.contains(
+        "show"
+      )
+    ){
+
+      closeViewer();
+
+    }
+
+  }
+);
+
+</script>
+
+</body>
+</html>
